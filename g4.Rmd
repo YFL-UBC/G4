@@ -133,7 +133,7 @@ hill_slope %>% ggplot(aes(x = dose0_nM, y = `b:(Intercept)`)) +
 # plotting the curve
 ggplot(data = newdata, aes(x = Elapsed, y = cell_count)) + 
   geom_line(aes(color = "red")) +
-  geom_line(data = raw_summary, aes(color = "black")) +
+  geom_point(data = raw, size = 0.01, alpha = 0.5, aes(color = "black")) +
   scale_color_manual(labels = c("raw", "model"), values = c("black", "red")) +
   facet_grid(rows = vars(compound,as.factor(dose_nM)), cols = vars(cell_line))
 ```
