@@ -10,6 +10,16 @@ load packages
 ```{r}
 library(tidyverse)
 library(here)
+library(drc)
+
+# custom ggpplot colors 
+gg_color_hue <- function(n) {
+  hues = seq(15, 375, length = n + 1)
+  hcl(h = hues, l = 65, c = 100)[1:n]
+}
+
+gg_pal = gg_color_hue(10)
+gg_pal[1] <- "#000000"
 ```
 
 import data
@@ -35,35 +45,106 @@ raw[[1]] <- read_csv(here("20220504_DLD1_NuclightRED_WT_cx5461_pds-hcl.csv")) %>
   left_join(metadata[[1]], by="well") %>% 
   mutate(cell_line = order[1])
 
-raw[[2]] <- read_csv(here("20220504_DLD1_NuclightRED_WT_cx5461_pds-hcl.csv")) %>%
+raw[[2]] <- read_csv(here("20220504_DLD1_NuclightRED_WT_cisplatin.csv")) %>%
   pivot_longer(cols = -(1:2), names_to = "well", values_to = "cell_count") %>%
   left_join(metadata[[2]], by="well") %>% 
   mutate(cell_line = order[1])
 
-raw[[3]] <- read_csv(here("20220504_DLD1_NuclightRED_WT_cx5461_pds-hcl.csv")) %>%
+raw[[3]] <- read_csv(here("20220504_DLD1_NuclightRED_BracKO_cx5461_pds-hcl.csv")) %>%
   pivot_longer(cols = -(1:2), names_to = "well", values_to = "cell_count") %>%
   left_join(metadata[[1]], by="well") %>% 
   mutate(cell_line = order[2])
 
-raw[[4]] <- read_csv(here("20220504_DLD1_NuclightRED_WT_cx5461_pds-hcl.csv")) %>%
+raw[[4]] <- read_csv(here("20220504_DLD1_NuclightRED_BracKO_cisplatin.csv")) %>%
   pivot_longer(cols = -(1:2), names_to = "well", values_to = "cell_count") %>%
   left_join(metadata[[2]], by="well") %>% 
   mutate(cell_line = order[2])
 
 raw <- bind_rows(raw)
 
+raw$compound <- replace(raw$compound, raw$compound == "pbs", "pds-hcl")
+raw$compound <- replace(raw$compound, raw$compound == "nahpo4", "cx5461")
+raw$compound <- replace(raw$compound, raw$compound == "dmso", "cisplatin")
+
+raw_summary <- raw %>% dplyr::group_by(`Date Time`, Elapsed, compound, dose_nM, cmpd_cat, cell_line) %>%
+  summarize(cell_count = mean(cell_count))
 ```
 
 # Plot 
 
-growth curves
+## growth curves
+
+facet by genotype and drug
 
 ```{r}
-raw %>% dplyr::group_by(`Date Time`, Elapsed, compound, dose_nM, cmpd_cat, cell_line) %>%
-  summarize(cell_count = mean(cell_count)) %>%
-ggplot(aes(x = Elapsed, y = cell_count, color = as.factor(dose_nM))) + 
+ggplot(raw_summary, aes(x = Elapsed, y = cell_count, color = as.factor(dose_nM))) + 
   geom_line() +
-  facet_grid(rows = vars(compound), cols = vars(cell_line))
+  facet_grid(rows = vars(compound), cols = vars(cell_line)) +
+  scale_color_manual(values=gg_pal)
+```
+
+## logistic modelling
+
+```{r}
+raw_temp <- raw %>% mutate(unique = paste(compound,dose_nM,cell_line, sep = ";"))
+
+temp <- map(unique(raw_temp$unique), function (x) drm(subset = unique %in% x, formula = cell_count ~ Elapsed, curveid  = unique, data = raw_temp, fct = L.4(), type = "continuous"))
+
+# prediction data
+elapsed_time <- expand.grid(Elapsed=seq(0,90, length=180))
+
+# predictions and confidence intervals
+pm <- map(temp, function(x) predict(x, newdata=elapsed_time))
+
+# new data with predictions
+newdata <- map(pm, function(x) elapsed_time %>% mutate(cell_count = x))
+
+newdata <- bind_rows(newdata)
+newdata$unique <- rep(unique(raw_temp$unique), each=180)
+
+newdata <- newdata %>% separate(unique, into = c("compound", "dose_nM", "cell_line"), sep = ";")
+
+hill_slope <- map(temp, function(x) x$coefficients[1])
+hill_slope <- bind_rows(hill_slope)
+hill_slope$unique <- unique(raw_temp$unique)
+hill_slope <- hill_slope %>% separate(unique, into = c("compound", "dose_nM", "cell_line"), sep = ";") %>%
+  mutate(dose_nM = as.numeric(dose_nM))
+
+hill_slope$dose0 <- hill_slope$dose_nM
+hill_slope$dose0[hill_slope$dose0 == 0] <- 0.5
+
+
+```
+
+
+plot slope by concentration
+
+
+```{r}
+hill_slope %>% ggplot(aes(x = dose0, y = `b:(Intercept)`)) +
+  geom_point() +
+  scale_x_log10() +
+  facet_grid(rows = vars(cell_line), cols = vars(compound))
+```
+
+
+```{r, fig.width=24, fig.height=4}
+# plotting the curve
+ggplot(data = newdata, aes(x = Elapsed, y = cell_count)) + 
+  geom_line(aes(color = "red")) +
+  geom_line(data = raw_summary, aes(alpha = 0.2)) +
+  facet_grid(cols = vars(compound,as.factor(dose_nM)), rows = vars(cell_line))
+  
+#c("cisplatin;10000;WT", "cisplatin;30000;WT", "cisplatin;10000;BRKO", "cisplatin;30000;BRKO", "cx5461;1000;WT", "cx5461;10000;WT", "cx5461;1000;BRKO", "cx5461;10000;BRKO")
+```
+
+facet by genotype and drug x concentration
+
+```{r,fig.width=24, fig.height=4}
+ggplot(data = raw_summary, aes(x = Elapsed, y = cell_count)) + 
+  geom_line(aes(color = "red")) +
+  facet_grid(cols = vars(compound,as.factor(dose_nM)), rows = vars(cell_line)) +
+  scale_color_manual(values=gg_pal)
 ```
 
 
