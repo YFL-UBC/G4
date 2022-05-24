@@ -7,7 +7,7 @@ output: md_document
 
 load packages
 
-```{r}
+```{r,message=FALSE,warning=FALSE}
 library(tidyverse)
 library(here)
 library(drc)
@@ -18,13 +18,14 @@ gg_color_hue <- function(n) {
   hcl(h = hues, l = 65, c = 100)[1:n]
 }
 
+#replace first color with black (for dose = 0)
 gg_pal = gg_color_hue(10)
 gg_pal[1] <- "#000000"
 ```
 
 import data
 
-```{r}
+```{r,message=FALSE}
 # number of treatment plates and lines in experiment
 n_plates <- 2
 n_lines <- 2
@@ -110,30 +111,30 @@ hill_slope$unique <- unique(raw_temp$unique)
 hill_slope <- hill_slope %>% separate(unique, into = c("compound", "dose_nM", "cell_line"), sep = ";") %>%
   mutate(dose_nM = as.numeric(dose_nM))
 
-hill_slope$dose0 <- hill_slope$dose_nM
-hill_slope$dose0[hill_slope$dose0 == 0] <- 0.5
+hill_slope$dose0_nM <- hill_slope$dose_nM
+hill_slope$dose0_nM[hill_slope$dose0_nM == 0] <- 0.5
 
 
 ```
 
 
-plot slope by concentration
+plot slope by concentration for drm modelling
 
 
 ```{r}
-hill_slope %>% ggplot(aes(x = dose0, y = `b:(Intercept)`)) +
+hill_slope %>% ggplot(aes(x = dose0_nM, y = `b:(Intercept)`)) +
   geom_point() +
   scale_x_log10() +
   facet_grid(rows = vars(cell_line), cols = vars(compound))
 ```
 
 
-```{r, fig.width=24, fig.height=4}
+```{r, fig.width=6, fig.height=36}
 # plotting the curve
 ggplot(data = newdata, aes(x = Elapsed, y = cell_count)) + 
   geom_line(aes(color = "red")) +
   geom_line(data = raw_summary, aes(alpha = 0.2)) +
-  facet_grid(cols = vars(compound,as.factor(dose_nM)), rows = vars(cell_line))
+  facet_grid(rows = vars(compound,as.factor(dose_nM)), cols = vars(cell_line))
   
 #c("cisplatin;10000;WT", "cisplatin;30000;WT", "cisplatin;10000;BRKO", "cisplatin;30000;BRKO", "cx5461;1000;WT", "cx5461;10000;WT", "cx5461;1000;BRKO", "cx5461;10000;BRKO")
 ```
@@ -150,7 +151,7 @@ ggplot(data = raw_summary, aes(x = Elapsed, y = cell_count)) +
 
 # from DLD1_NuclightRED_20220504_curvefit_slope.R
 
-```{r}
+```{r,eval=FALSE}
 # Import libraries --------------------------------------------------------
 
 library(ggplot2)
