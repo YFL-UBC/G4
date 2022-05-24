@@ -133,21 +133,10 @@ hill_slope %>% ggplot(aes(x = dose0_nM, y = `b:(Intercept)`)) +
 # plotting the curve
 ggplot(data = newdata, aes(x = Elapsed, y = cell_count)) + 
   geom_line(aes(color = "red")) +
-  geom_line(data = raw_summary, aes(alpha = 0.2)) +
+  geom_line(data = raw_summary, alpha = 0.1, aes(color = "black")) +
+  scale_color_manual(labels = c("raw", "model"), values = c("black", "red")) +
   facet_grid(rows = vars(compound,as.factor(dose_nM)), cols = vars(cell_line))
-  
-#c("cisplatin;10000;WT", "cisplatin;30000;WT", "cisplatin;10000;BRKO", "cisplatin;30000;BRKO", "cx5461;1000;WT", "cx5461;10000;WT", "cx5461;1000;BRKO", "cx5461;10000;BRKO")
 ```
-
-facet by genotype and drug x concentration
-
-```{r,fig.width=24, fig.height=4}
-ggplot(data = raw_summary, aes(x = Elapsed, y = cell_count)) + 
-  geom_line(aes(color = "red")) +
-  facet_grid(cols = vars(compound,as.factor(dose_nM)), rows = vars(cell_line)) +
-  scale_color_manual(values=gg_pal)
-```
-
 
 # from DLD1_NuclightRED_20220504_curvefit_slope.R
 
