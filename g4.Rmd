@@ -23,19 +23,19 @@ gg_pal = gg_color_hue(10)
 gg_pal[1] <- "#000000"
 ```
 
-import data
+import data 20220504
 
 ```{r,message=FALSE}
+# initialize raw and metadata, as list
+raw <- vector(mode = "list", length = n_lines*n_plates)
+metadata <- vector(mode = "list", length = n_plates)
+
 # number of treatment plates and lines in experiment
 n_plates <- 2
 n_lines <- 2
 
 # order of cell lines in raw
 order <- c("WT", "BRKO")
-
-# initialize raw and metadata, as list
-raw <- vector(mode = "list", length = n_lines*n_plates)
-metadata <- vector(mode = "list", length = n_plates)
 
 # meta data for plates 
 metadata[[1]] <- read_csv(here("20220504_DLD1_metadata_1.csv"))
@@ -60,6 +60,52 @@ raw[[4]] <- read_csv(here("20220504_DLD1_NuclightRED_BracKO_cisplatin.csv")) %>%
   pivot_longer(cols = -(1:2), names_to = "well", values_to = "cell_count") %>%
   left_join(metadata[[2]], by="well") %>% 
   mutate(cell_line = order[2])
+
+```
+
+import data 20220504
+
+```{r}
+# initialize raw and metadata, as list
+raw <- vector(mode = "list", length = n_lines*n_plates)
+metadata <- vector(mode = "list", length = n_plates)
+
+# number of treatment plates and lines in experiment
+n_plates <- 2
+n_lines <- 2
+
+# order of cell lines in raw
+order <- c("WT", "BRKO")
+
+# meta data for plates 
+metadata[[1]] <- read_csv(here("20220504_DLD1_metadata_1.csv"))
+metadata[[2]] <- read_csv(here("20220504_DLD1_metadata_2.csv"))
+
+raw[[1]] <- read_csv(here("20220504_DLD1_NuclightRED_WT_cx5461_pds-hcl.csv")) %>%
+  pivot_longer(cols = -(1:2), names_to = "well", values_to = "cell_count") %>%
+  left_join(metadata[[1]], by="well") %>% 
+  mutate(cell_line = order[1])
+
+raw[[2]] <- read_csv(here("20220504_DLD1_NuclightRED_WT_cisplatin.csv")) %>%
+  pivot_longer(cols = -(1:2), names_to = "well", values_to = "cell_count") %>%
+  left_join(metadata[[2]], by="well") %>% 
+  mutate(cell_line = order[1])
+
+raw[[3]] <- read_csv(here("20220504_DLD1_NuclightRED_BracKO_cx5461_pds-hcl.csv")) %>%
+  pivot_longer(cols = -(1:2), names_to = "well", values_to = "cell_count") %>%
+  left_join(metadata[[1]], by="well") %>% 
+  mutate(cell_line = order[2])
+
+raw[[4]] <- read_csv(here("20220504_DLD1_NuclightRED_BracKO_cisplatin.csv")) %>%
+  pivot_longer(cols = -(1:2), names_to = "well", values_to = "cell_count") %>%
+  left_join(metadata[[2]], by="well") %>% 
+  mutate(cell_line = order[2])
+```
+
+tranform
+
+```{r,message=FALSE}
+
 
 raw <- bind_rows(raw)
 
